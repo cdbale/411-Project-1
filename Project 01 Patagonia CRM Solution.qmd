@@ -1,0 +1,433 @@
+---
+title: "Patagonia: Evaluating the Customer Base"
+author: "Cameron Bale"
+format: docx
+---
+
+## Question 1
+
+**Twenty points total for the question, two points each for:**
+
+- **The question having its own section and heading.**
+- **Commenting code.**
+- **Connecting to the database.**
+- **Importing `online_revenue` and `online_transactions` (at least) from the database.**
+- **Connecting to and importing data from the Qualtrics API.**
+- **Importing `survey_data` from the Qualtrics API.**
+
+**Four points each for:**
+
+- **Writing the new data locally.**
+- **Setting `#| eval: false` so the code doesn't run when the report is rendered (no output show show from connecting to the database).**
+
+Let's load packages and import the data. Note that we are only demonstrating what we have already done to import the data from the database and using the Qualtrics API.
+
+```{r}
+# Load packages.
+library(RPostgres)
+library(tidyverse)
+library(dbplyr)
+library(DBI)
+library(qualtRics)
+library(tidytext)
+```
+
+```{r}
+#| eval: false
+
+con <- dbConnect(
+  RPostgres::Postgres(),
+  dbname = "analyticsdb",
+  host = "analyticsdb.c5i8use80ktf.us-east-2.rds.amazonaws.com",
+  port = 5432,
+  user = "quantmktg",
+  password = rstudioapi::askForPassword("Database password")
+)
+
+dbListTables(con)
+```
+
+```{r}
+#| eval: false
+
+# Import online_transactions.
+online_transactions <- tbl(con, "online_transactions") |>
+  collect()
+
+# Import online_revenue.
+online_revenue <- tbl(con, "online_revenue") |>
+  collect()
+
+# Import customer_data.
+customer_data <- tbl(con, "customer_data") |>
+  collect()
+
+# Import store_revenue.
+store_revenue <- tbl(con, "store_revenue") |>
+  collect()
+
+# Import store_transactions.
+store_transactions <- tbl(con, "store_transactions") |>
+  collect()
+
+# Disconnect from the database.
+dbDisconnect(con)
+```
+
+```{r}
+#| eval: false
+
+# Set qualtrics API credentials
+qualtRics::qualtrics_api_credentials(
+  api_key = "Ir2JDPvhOjSmMIpWo8bwVUAbvPs6uwGqIKipAuo6", 
+  base_url = "sjc1.qualtrics.com"
+)
+
+# Connect to API.
+survey_data <- fetch_survey("SV_0rn3HbR4AEc1BUG")
+```
+
+```{r}
+# Write data locally.
+write_csv(online_transactions, "online_transactions.csv")
+write_csv(online_revenue, "online_revenue.csv")
+write_csv(customer_data, "customer_data.csv")
+write_csv(store_revenue, "store_revenue.csv")
+write_csv(store_transactions, "store_transactions.csv")
+write_csv(survey_data, "survey_data.csv")
+```
+
+Now let's import what we've written locally so we have data to work with when we render.
+
+```{r}
+# Import data.
+customer_data <- read_csv("customer_data.csv")
+store_transactions <- read_csv("store_transactions.csv")
+store_revenue <- read_csv("store_revenue.csv")
+online_transactions <- read_csv("online_transactions.csv")
+online_revenue <- read_csv("online_revenue.csv")
+survey_data <- read_csv("survey_data.csv")
+```
+
+## Question 2
+
+**Twenty points total, two points each for:**
+
+- **The question having its own section and heading.**
+- **Commenting code.**
+
+**One point each for:**
+
+- **Using `pivot_longer()` to tidy the 2018 in-store data.**
+- **Using a grouped summary to summarize in-store transactions data.**
+- **Filtering in-store customers based on the given definition of > 20 transactions in 2018.**
+- **In a single plot appropriate for the data type, including the relationship between `region`, `married`, and `college_degree` for in-store recent customers.**
+- **Including appropriate labels and axes titles for the plot of in-store recent customers.**
+- **Using `pivot_longer()` to tidy the 2018 online data.**
+- **Using a grouped summary to summarize online transactions data.**
+- **Filtering online customers based on the given definition of > 20 transactions in 2018.**
+- **In a single plot appropriate for the data type, including the relationship between `region`, `married`, and `college_degree` for online recent customers.**
+- **Including appropriate labels and axes titles for the plot of online recent customers.**
+
+**Three points each for:**
+
+- **Answering the question about what the comparison between the two plots suggests about Patagonia's customer base and how it differs in-store vs. online.**
+- **Answers written in complete sentences and appropriately placed with respect to data and visualizations.**
+
+Let's find the "recent customers" (i.e., anyone who has made more than 20 transactions in 2018) and plot some of their demographic data. Let's start with the store transactions data first.
+
+```{r}
+# Find "recent customers" based on store transactions.
+store_recent_customers <- store_transactions |> 
+  select(customer_id, contains("2018")) |> 
+  pivot_longer(
+    -customer_id,
+    names_to = "month_year",
+    values_to = "store_transactions"
+  ) |> 
+  group_by(customer_id) |> 
+  summarize(total_store_transactions = sum(store_transactions)) |> 
+  filter(total_store_transactions > 20)
+
+# Visualize the composition of these in-store "recent customers."
+store_recent_customers |> 
+  left_join(customer_data, join_by(customer_id)) |> 
+  mutate(
+    college_degree = fct_recode(
+      college_degree, "No College Degree" = "No", "Has College Degree" = "Yes"
+    )
+  ) |> 
+  ggplot(aes(x = region, fill = married)) +
+  geom_bar(position = "fill") +
+  facet_grid(~ college_degree) +
+  labs(
+    title = "In-Store Recent Customers",
+    subtitle = "Recent Customers Made > 20 Store Transactions in 2018",
+    x = "Region",
+    y = "Proportion"
+  ) +
+  scale_fill_discrete(name = "Married")
+```
+
+The biggest proportional slice of in-store recent customers are married Midwesterners without a college degree. Let's compare this with the "recent customers" using online transactions data.
+
+```{r}
+# Find "recent customers" based on online transactions.
+online_recent_customers <- online_transactions |> 
+  select(customer_id, contains("2018")) |> 
+  pivot_longer(
+    -customer_id,
+    names_to = "month_year",
+    values_to = "online_transactions"
+  ) |> 
+  group_by(customer_id) |> 
+  summarize(total_online_transactions = sum(online_transactions)) |> 
+  filter(total_online_transactions > 20)
+
+# Visualize the composition of these online "recent customers."
+online_recent_customers |> 
+  left_join(customer_data, join_by(customer_id)) |> 
+  mutate(
+    college_degree = fct_recode(
+      college_degree, "No College Degree" = "No", "Has College Degree" = "Yes"
+    )
+  ) |> 
+  ggplot(aes(x = region, fill = married)) +
+  geom_bar(position = "fill") +
+  facet_grid(~ college_degree) +
+  labs(
+    title = "Online Recent Customers",
+    subtitle = "Recent Customers Made > 20 Online Transactions in 2018",
+    x = "Region",
+    y = "Proportion"
+  ) +
+  scale_fill_discrete(name = "Married")
+```
+
+Unlike the in-store recent customers, a far greater proportion of online recent customers aren't married. Additionally there aren't any online recent customers from the South who have a college degree.
+
+This comparison suggests the following. First, there appears to be a different set of customers who can be defined as "recent customers" in-store vs. online. Second, while in-store recent customers appear to be evenly split between being married and having a college degree, online recent customers are decidedly more unmarried with fewer overall with a college degree.
+
+## Question 3
+
+**Twenty points total, two points each for:**
+
+- **The question having its own section and heading.**
+- **Commenting code.**
+
+**One point each for:**
+
+- **Using `pivot_longer()` to tidy the 2017-2018 in-store data.**
+- **Using a grouped summary to summarize in-store transactions data.**
+- **In a single plot appropriate for the data type, looking at the relationship between in-store buy rate and `gender`.**
+- **Including appropriate labels and axes titles for the plot of in-store buy rate.**
+- **Using `pivot_longer()` to tidy the 2017-2018 online data.**
+- **Using a grouped summary to summarize online transactions data.**
+- **In a single plot appropriate for the data type, looking at the relationship between online buy rate and `gender`.**
+- **Including appropriate labels and axes titles for the plot of online buy rate.**
+
+**Four points each for:**
+
+- **Answering the question about what the comparison between the two plots suggests about Patagonia's customer base.**
+- **Answers written in complete sentences and appropriately placed with respect to data and visualizations.**
+
+Let's first compute the customer in-store buy rate for 2017-2018 and visualize differences by gender.
+
+```{r}
+# Compute the customer in-store buy rate for 2017 and 2018.
+store_buy_rates <- store_transactions |> 
+  select(customer_id, contains("2017"), contains("2018")) |> 
+  pivot_longer(
+    -customer_id,
+    names_to = "month_year",
+    values_to = "store_transactions"
+  ) |> 
+  group_by(customer_id) |> 
+  summarize(store_buy_rate = mean(store_transactions))
+
+# Visualize the in-store buy rate by gender.
+store_buy_rates |> 
+  left_join(customer_data, join_by(customer_id)) |> 
+  ggplot(aes(x = store_buy_rate, fill = gender)) +
+  geom_density(alpha = 0.5) +
+  labs(
+    title = "In-Store Buy Rates by Gender",
+    subtitle = "Buy Rates are Average Store Transactions in 2017-2018",
+    x = "Store Buy Rate",
+    y = "Density"
+  ) +
+  scale_fill_discrete(name = "Gender")
+```
+
+There doesn't appear to be much difference between genders for the specified in-store buy rate, with an average buy rate of 0.75. Let's compare this with the customer online buy rate for 2017-2018.
+
+```{r}
+# Compute the customer online buy rate for 2017 and 2018.
+online_buy_rates <- online_transactions |> 
+  select(customer_id, contains("2017"), contains("2018")) |> 
+  pivot_longer(
+    -customer_id,
+    names_to = "month_year",
+    values_to = "online_transactions"
+  ) |> 
+  group_by(customer_id) |> 
+  summarize(online_buy_rate = mean(online_transactions))
+
+# Visualize the in-store buy rate by gender.
+online_buy_rates |> 
+  left_join(customer_data, join_by(customer_id)) |> 
+  ggplot(aes(x = online_buy_rate, fill = gender)) +
+  geom_density(alpha = 0.5) +
+  labs(
+    title = "Online Buy Rates by Gender",
+    subtitle = "Buy Rates are Average Online Transactions in 2017-2018",
+    x = "Online Buy Rate",
+    y = "Density"
+  ) +
+  scale_fill_discrete(name = "Gender")
+```
+
+Similarly, there doesn't appear to be much difference between genders for the specified online buy rate, with an average buy rate of 0.5. While there doesn't appear to be difference between genders for either the in-store or online buy rates, this comparison does suggest that Patagonia's customer base does buy more on average in-store than online.
+
+## Question 4
+
+**Twenty points total, two points each for:**
+
+- **The question having its own section and heading.**
+- **Commenting code.**
+
+**One point each for:**
+
+- **Creating the top_box variable using `if_else()`.**
+- **Using the top box variable to `filter()`.**
+- **Using `unnest_tokens()`.**
+- **Using `anti_join()` to remove stop words.**
+- **Using `count()` to create review word counts.**
+- **Using `slice()` or `slice_head()` to keep the most frequently used words.**
+- **Using `fct_reorder()` to make the plot easier to read.**
+- **Including appropriate labels and axes titles for the plot of review word counts.**
+
+**Four points each for:**
+
+- **Answering what the review word counts suggest about Patagonia's customer base.**
+- **Answers written in complete sentences and appropriately placed with respect to data and visualizations.**
+
+Let's create the new "top box" overall satisfaction variable and compare review word count plots for the "top box" vs. "not top box" groups.
+
+```{r}
+# Create a top_box variable from overall satisfaction.
+survey_data <- survey_data |> 
+  mutate(top_box = if_else(sat_overall == "Very satisfied", "Very satisfied", "Not very satisfied"))
+
+# Plot review word counts where top_box == "Very satisfied".
+survey_data |> 
+  filter(top_box == "Very satisfied") |> 
+  unnest_tokens(word, review_text) |> 
+  anti_join(stop_words, join_by(word)) |> 
+  count(word) |> 
+  arrange(desc(n)) |> 
+  slice(1:20) |> 
+  mutate(word = fct_reorder(word, n)) |>
+  ggplot(aes(x = n, y = word)) +
+  geom_col() +
+  labs(
+    title = "Product Review Word Counts",
+    subtitle = "From Respondents with Top Box Overall Satisfaction"
+  )
+```
+
+The respondents in the top-box overall satisfaction group use nice, bag, and easy frequently, along with fit, love, and quality, suggesting there may be specific attitudes or products that are responsible for the top-box overall satisfaction.
+
+## Question 5
+
+**Twenty points total, one point each for:**
+
+- **The question having its own section and heading.**
+- **Commenting code.**
+- **Using `pivot_longer()` to tidy the in-store revenue data.**
+- **Using a grouped summary to summarize in-store revenue data.**
+- **Using `pivot_longer()` to tidy the online revenue data.**
+- **Using a grouped summary to summarize online revenue data.**
+- **Using `left_join()` to join all three datasets.**
+- **Creating the overall revenue variable by summing the averages.**
+- **Visualizing the relationship between overall revenue and age in the dashboard.**
+- **Including appropriate labels and axes titles for the dashboard plot.**
+- **Including a filter for gender.**
+- **Including a filter for marital status.**
+- **Including a filter for college degree status.**
+- **Including a filter for the new high income variable.**
+- **Including a call-out box for average in-store revenue.**
+- **Including a call-out box for average online revenue.**
+- **Including a call-out box for average overall revenue.**
+- **Answering what they have learned about Patagonia's customer base using the dashboard.**
+- **Recreating one of the plots in the report, with appropriate labels and axes titles.**
+- **Including a link to the published dashboard.**
+- **Answers written in complete sentences and appropriately placed with respect to data and visualizations.**
+
+Let's compute the average revenue for each customer across in-store and online channels, as well as the new "high income" and age variables, and then write the data for use in the dashboard.
+
+```{r}
+# Compute the average in-store revenue for each customer.
+store_average_revenue <- store_revenue |> 
+  pivot_longer(
+    -customer_id,
+    names_to = "month_year",
+    values_to = "store_revenue"
+  ) |> 
+  group_by(customer_id) |> 
+  summarize(avg_store_revenue = mean(store_revenue))
+
+# Compute the average online revenue for each customer.
+online_average_revenue <- online_revenue |> 
+  pivot_longer(
+    -customer_id,
+    names_to = "month_year",
+    values_to = "online_revenue"
+  ) |> 
+  group_by(customer_id) |> 
+  summarize(avg_online_revenue = mean(online_revenue))
+
+# Create the overall revenue for each customer, high income, and age variables.
+overall_revenue <- store_average_revenue |> 
+  left_join(online_average_revenue, join_by(customer_id)) |> 
+  left_join(customer_data, join_by(customer_id)) |> 
+  mutate(
+    overall_revenue = avg_online_revenue + avg_store_revenue,
+    high_income = if_else(income > 100000, "High income", "Not high income"),
+    age = 2023 - birth_year
+  ) |> 
+  select(
+    customer_id, overall_revenue, avg_store_revenue, avg_online_revenue, 
+    age, gender, married, college_degree, high_income
+  )
+
+# Write the data locally.
+write_csv(overall_revenue, here::here("Projects", "Project 01 Patagonia CRM", "overall_revenue.csv"))
+```
+
+The dashboard makes exploring possible combinations of filtered variables easy. We can easily see how differences in gender, marital status, college degree, and high income effects the average and overall revenue as well as the relationship between age and overall revenue. For example, it's clear that women spend the most. One plot of interest to me was the following.
+
+```{r}
+# One plot of interest recreated from the dashboard.
+overall_revenue |> 
+  filter(
+    gender == "Female", 
+    married == "Yes", 
+    college_degree == "Yes", 
+    high_income == "Not high income"
+  ) |>
+  ggplot(aes(x = overall_revenue, y = age)) +
+  geom_point(size = 3, alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    title = "Overall Revenue and Age",
+    subtitle = "Married Women with College Degrees and < $100K Incomes",
+    x = "Overall Revenue",
+    y = "Age"
+  )
+```
+
+While this combination of filters doesn't produce the largest average overall revenue, it does uncover the most correlation between age and overall revenue. In other words, more than any other group we can define in the dashboard, married women with college degrees and < $100K incomes spend more as they get older.
+
+Explore the dashboard on your own [here](https://marcdotson.shinyapps.io/project_01/).
+

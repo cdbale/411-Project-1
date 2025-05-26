@@ -1,0 +1,144 @@
+---
+title: "Patagonia CRM Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+# Load packages.
+library(tidyverse)
+library(flexdashboard)
+library(shiny)
+library(rsconnect)
+
+# Import data.
+overall_revenue <- read_csv("overall_revenue.csv")
+```
+
+Sidebar {.sidebar}
+------------------------------------------
+
+```{r}
+# Select the gender.
+selectInput(
+  inputId = "gender",
+  label = "Gender",
+  choices = unique(overall_revenue$gender)
+)
+
+# Select the marriage status.
+selectInput(
+  inputId = "married",
+  label = "Married",
+  choices = unique(overall_revenue$married)
+)
+
+# Select the college degree status.
+selectInput(
+  inputId = "college_degree",
+  label = "College Degree",
+  choices = unique(overall_revenue$college_degree)
+)
+
+# Select the high income status.
+selectInput(
+  inputId = "high_income",
+  label = "High Income",
+  choices = unique(overall_revenue$high_income)
+)
+```
+
+Row
+------------------------------------------
+
+### Overall Revenue and Age
+
+```{r}
+# Plot with reference to the region.
+renderPlot({
+  overall_revenue |> 
+    filter(
+      gender == input$gender, 
+      married == input$married, 
+      college_degree == input$college_degree, 
+      high_income == input$high_income
+    ) |>
+    ggplot(aes(x = overall_revenue, y = age)) +
+    geom_point(size = 3, alpha = 0.5) +
+    geom_smooth(method = "lm", se = FALSE) +
+    labs(
+      x = "Overall Revenue",
+      y = "Age"
+    )
+})
+```
+
+Row
+------------------------------------------
+
+### Average In-Store Revenue
+
+```{r}
+# Add a value box (numeric summary) to the empty environment.
+renderValueBox({
+  # Compute the average in-store revenue.
+  avg_store_revenue <- overall_revenue |> 
+    filter(
+      gender == input$gender, 
+      married == input$married, 
+      college_degree == input$college_degree, 
+      high_income == input$high_income
+    ) |>
+    summarize(avg_store_revenue = mean(avg_store_revenue)) |> 
+    pull()
+  
+  # Print the average in-store revenue in a value box.
+  valueBox(round(avg_store_revenue), icon = "fa-money")
+})
+```
+
+### Average Online Revenue
+
+```{r}
+# Add a value box (numeric summary) to the empty environment.
+renderValueBox({
+  # Compute the average online revenue.
+  avg_online_revenue <- overall_revenue |> 
+    filter(
+      gender == input$gender, 
+      married == input$married, 
+      college_degree == input$college_degree, 
+      high_income == input$high_income
+    ) |>
+    summarize(avg_online_revenue = mean(avg_online_revenue)) |> 
+    pull()
+  
+  # Print the average online revenue in a value box.
+  valueBox(round(avg_online_revenue), icon = "fa-money")
+})
+```
+
+### Average Overall Revenue
+
+```{r}
+# Add a value box (numeric summary) to the empty environment.
+renderValueBox({
+  # Compute the average overall revenue.
+  avg_overall_revenue <- overall_revenue |> 
+    filter(
+      gender == input$gender, 
+      married == input$married, 
+      college_degree == input$college_degree, 
+      high_income == input$high_income
+    ) |>
+    summarize(avg_overall_revenue = mean(overall_revenue)) |> 
+    pull()
+  
+  # Print the average overall revenue in a value box.
+  valueBox(round(avg_overall_revenue), icon = "fa-money")
+})
+```
+

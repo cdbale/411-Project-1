@@ -1,0 +1,67 @@
+---
+title: "MKTG 411 Marketing Analytics"
+subtitle: "Patagonia: Evaluating the Customer Base"
+date: "Due Tuesday, February 13"
+output: pdf_document
+fontsize: 12pt
+urlcolor: blue
+header-includes:
+  - \usepackage{hyperref}
+  - \hypersetup{colorlinks=true, urlcolor=blue}
+---
+
+## Project Overview
+
+As a new marketing analyst at Patagonia, you have been tasked with evaluating the composition and health of the existing customer base. Like most companies, Patagonia has collected a variety of data about their customers: transaction histories, financial information, demographics, and product reviews. These data are collected by a variety of departments in the company and are organized as part of the customer relationship management (CRM) system.
+
+After a few initial exploratory analyses using the recency, frequency, monetary (RFM) framework, you now have access to the entire CRM system and are asked to put together a technical report on the composition and health of the existing customer base using professional visualizations, succinct explanations, and an interactive dashboard.
+
+## Requirements
+
+You will have one week to complete the project. You can ask questions and work in small groups. However, you must submit your own work. The deliverable will be a Word document rendered from Quarto submitted on Canvas. \vspace{-3mm}
+
+- Reference the slides, your notes, exercises, feedback, solutions, and the *cheat sheet*.
+- This is a *technical report*: Show all your work.
+- Code should be clearly commented.
+- The report should be professionally written and should flow naturally with the code and output. *Proofread your rendered report.*
+- Practice good coding and reporting conventions throughout. \vspace{-3mm}
+
+After completing the project, you will have working code to take with you and adapt to similar applications in practice.
+
+## Questions
+
+Answer the following questions. Each question should have its own section and heading. Each question is worth 20 points.
+
+1. Acquire all of the CRM data along with the associated survey data. \vspace{-3mm}
+
+- Import all of the CRM data. In addition to `customer_data`, `store_transactions`, and `store_revenue`, the data tables `online_transactions` and `online_revenue` are available on the `analyticsdb` database accessed previously.
+- Additionally, a recent survey of a sample of "high monetary value" and "low monetary value" customers is available on the Qualtrics account accessed previously via its API with the survey ID `SV_0rn3HbR4AEc1BUG`.
+- Acquire these new data and write them locally for use in subsequent questions. Show your work and run the code once but set `#| eval: false` to ensure the code that queries the database and calls the API doesn't run again when the report is rendered.
+
+2. Who are Patagonia's recent customers? Let's define "recent customers" as anyone has has made more than 20 transactions in 2018. \vspace{-3mm}
+
+- Find these "recent customers" based on in-store transactions only and, in a single plot, visualize the relationship between what regions they come from, their marital status, and whether or not they have a college degree.
+- Then find these "recent customers" based on online transactions only and, in a single plot, visualize the relationship between what regions they come from, their marital status, and whether or not they have a college degree.
+- What does this comparison between in-store and online "recent customers" suggest about Patagonia's customer base and how it differs in-store vs. online?
+
+3. Who are Patagonia's frequent customers? One way to define frequency is the buy rate, the average amount of product purchased over a period of time. \vspace{-3mm}
+
+- Find the in-store customer buy rate by computing the average in-store transactions for each customer over 2017 and 2018. Visualize the in-store buy rate by gender.
+- Find the online customer buy rate by computing the average online transactions for each customer over 2017 and 2018. Visualize the online buy rate by gender.
+- What does this comparison between in-store and online buy rates suggest about Patagonia's customer base?
+
+4. What are customers saying about Patagonia? \vspace{-3mm}
+
+- Create a new variable based on whether or not a survey respondent has "top box" overall satisfaction (i.e., if `sat_overall` equals `Very satisfied` or not) using the `if_else()` helper function.
+- Visualize the overall review word count for these `Very satisfied` respondents based on this new "top box" variable.
+- What does this suggest about Patagonia's customer base?
+
+5. Who are Patagonia's most profitable customers? Value per customer calculations are typically based on average profitability. Since we don't have cost information, average revenue is the best we can do. \vspace{-3mm}
+
+- Find the overall customer revenue by computing both the average in-store revenue for each customer and the average online revenue for each customer and then adding them together.
+- Create and publish an interactive dashboard centered around a visualization of the relationship between this overall revenue variable and age.
+- Include inputs on the dashboard for customer gender, whether or not a customer is married, whether or not a customer has a college degree, and whether or not a customer has a "high income" (i.e., use the `if_else()` helper function again to create a new variable where `income > 100000` is "high income").
+- Include call-out boxes for average in-store revenue, average online revenue, and average overall revenue based on the selected inputs.
+- Use this dashboard to explore the relationship between the included variables.
+- What does the visualization suggest about Patagonia's customer base? Recreate one of the plots in the report that you found informative along with a link to the published dashboard.
+

@@ -1,0 +1,13 @@
+name: project_01
+title: project_01
+username: marcdotson
+account: marcdotson
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 11142077
+bundleId: 8223350
+url: https://marcdotson.shinyapps.io/project_01/
+version: 1
+asMultiple: TRUE
+asStatic: FALSE
+ignoredFiles: Project 01 Patagonia CRM.Rmd
